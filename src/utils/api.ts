@@ -18,6 +18,8 @@ const api = axios.create({
   },
 });
 
+type AyahEditionResponse = { edition: { identifier: string } } & Ayah;
+
 /**
  * @function getEdition - get the edition from user configuration
  * @returns {string} - the edition from user configuration
@@ -68,5 +70,30 @@ export const getAyahs = async (surahNumber: number): Promise<Ayah[]> => {
   } catch (error) {
     console.error(error);
     return [];
+  }
+};
+
+export const getAyahByReference = async (reference: string): Promise<Ayah | null> => {
+  try {
+    const userEdition = getEdition();
+    const { data } = await api.get(`/ayah/${reference}/editions/${userEdition},${DEFAULT_ARABIC_EDITION}`);
+    const editions = data.data as AyahEditionResponse[];
+    const translationEdition = editions.find(({ edition }) => edition.identifier === userEdition);
+
+    if (!translationEdition) {
+      return null;
+    }
+
+    const arabicEdition = editions.find(({ edition }) => edition.identifier === DEFAULT_ARABIC_EDITION);
+    const translationAyah = { ...translationEdition };
+    delete translationAyah.edition;
+
+    return {
+      ...translationAyah,
+      arabicText: arabicEdition?.text,
+    };
+  } catch (error) {
+    console.error(error);
+    return null;
   }
 };

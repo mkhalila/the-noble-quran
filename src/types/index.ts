@@ -27,6 +27,7 @@ export interface Ayah {
   ruku: number;
   hizbQuarter: number;
   sajda: boolean;
+  surah?: Surah;
 }
 
 export interface FavoriteAyah {

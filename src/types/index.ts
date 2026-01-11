@@ -19,6 +19,7 @@ export interface Surah {
 export interface Ayah {
   number: number;
   text: string;
+  arabicText?: string;
   numberInSurah: number;
   juz: number;
   manzil: number;
@@ -30,6 +31,7 @@ export interface Ayah {
 
 export interface FavoriteAyah {
   text: string;
+  arabicText?: string;
   ayahNumber: number;
   surah: string;
   surahNumber: number;

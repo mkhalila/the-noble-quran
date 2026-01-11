@@ -32,13 +32,29 @@ export default function Command() {
           title={favorite.surah}
           subtitle={favorite.ayahNumber.toString()}
           icon={{ source: "quran_logo.png" }}
-          detail={<List.Item.Detail markdown={`### ${favorite.text}`} />}
+          detail={
+            <List.Item.Detail markdown={`${favorite.arabicText ? `${favorite.arabicText}\n\n` : ""}${favorite.text}`} />
+          }
           actions={
             <ActionPanel>
               <Action.CopyToClipboard
-                title="Copy Ayah"
+                title="Copy Translation"
                 content={`${favorite.text}\n\n${favorite.surah} ${favorite.surahNumber}:${favorite.ayahNumber}`}
               />
+              {favorite.arabicText ? (
+                <>
+                  <Action.CopyToClipboard
+                    title="Copy Arabic"
+                    content={`${favorite.arabicText}\n\n${favorite.surah} ${favorite.surahNumber}:${favorite.ayahNumber}`}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "a" }}
+                  />
+                  <Action.CopyToClipboard
+                    title="Copy Arabic & Translation"
+                    content={`${favorite.arabicText}\n\n${favorite.text}\n\n${favorite.surah} ${favorite.surahNumber}:${favorite.ayahNumber}`}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "b" }}
+                  />
+                </>
+              ) : null}
               <Action.OpenInBrowser
                 url={`${BASE_QURAN_URL}/${favorite.surahNumber}/${favorite.ayahNumber}`}
                 title="Read in Browser"

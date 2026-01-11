@@ -73,7 +73,7 @@ const ReadSurah = ({ surah }: { surah: Surah }): JSX.Element => {
             key={ayah.number}
             title={`${ayah.numberInSurah}`}
             icon={{ source: "quran_logo.png" }}
-            detail={<List.Item.Detail markdown={`### ${ayah.text}`} />}
+            detail={<List.Item.Detail markdown={`${ayah.arabicText ? `${ayah.arabicText}\n\n` : ""}${ayah.text}`} />}
             actions={
               <ActionPanel>
                 <Action.OpenInBrowser
@@ -82,9 +82,19 @@ const ReadSurah = ({ surah }: { surah: Surah }): JSX.Element => {
                   shortcut={Keyboard.Shortcut.Common.Open}
                 />
                 <Action.CopyToClipboard
-                  title="Copy Ayah"
+                  title="Copy Translation"
                   content={`${ayah.text}\n\n${surah.englishName} ${surah.number}:${ayah.numberInSurah}`}
                   shortcut={Keyboard.Shortcut.Common.Copy}
+                />
+                <Action.CopyToClipboard
+                  title="Copy Arabic"
+                  content={`${ayah.arabicText ?? ""}\n\n${surah.englishName} ${surah.number}:${ayah.numberInSurah}`}
+                  shortcut={{ modifiers: ["cmd", "shift"], key: "a" }}
+                />
+                <Action.CopyToClipboard
+                  title="Copy Arabic & Translation"
+                  content={`${ayah.arabicText ?? ""}\n\n${ayah.text}\n\n${surah.englishName} ${surah.number}:${ayah.numberInSurah}`}
+                  shortcut={{ modifiers: ["cmd", "shift"], key: "b" }}
                 />
                 <Action
                   title="Add to Favorites"
@@ -92,6 +102,7 @@ const ReadSurah = ({ surah }: { surah: Surah }): JSX.Element => {
                   onAction={() =>
                     addAyahToFavorites({
                       text: ayah.text,
+                      arabicText: ayah.arabicText,
                       ayahNumber: ayah.numberInSurah,
                       surah: surah.englishName,
                       surahNumber: surah.number,

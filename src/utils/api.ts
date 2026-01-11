@@ -1,6 +1,7 @@
 import axios from "axios";
 import { Edition, Surah, Ayah } from "../types";
 import { getPreferenceValues } from "@raycast/api";
+import { DEFAULT_ARABIC_EDITION } from "./constants";
 
 /**
  * @constant BASE_URL - the base URL for the API
@@ -48,8 +49,22 @@ export const getSurah = async (): Promise<Surah[]> => {
 
 export const getAyahs = async (surahNumber: number): Promise<Ayah[]> => {
   try {
-    const { data } = await api.get(`/surah/${surahNumber}/${getEdition()}`);
-    return data.data.ayahs;
+    const userEdition = getEdition();
+    const { data } = await api.get(`/surah/${surahNumber}/editions/${userEdition},${DEFAULT_ARABIC_EDITION}`);
+    const editions = data.data as { edition: { identifier: string }; ayahs: Ayah[] }[];
+    const translationEdition = editions.find(({ edition }) => edition.identifier === userEdition);
+    const arabicEdition = editions.find(({ edition }) => edition.identifier === DEFAULT_ARABIC_EDITION);
+
+    if (!translationEdition) {
+      return [];
+    }
+
+    const arabicAyahMap = new Map((arabicEdition?.ayahs ?? []).map((ayah) => [ayah.numberInSurah, ayah.text]));
+
+    return translationEdition.ayahs.map((ayah) => ({
+      ...ayah,
+      arabicText: arabicAyahMap.get(ayah.numberInSurah),
+    }));
   } catch (error) {
     console.error(error);
     return [];

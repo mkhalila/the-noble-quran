@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Detail, Icon, Keyboard, List, showToast } from "@raycast/api";
+import { Action, ActionPanel, Icon, Keyboard, List, showToast } from "@raycast/api";
 import { JSX, useEffect, useMemo, useState } from "react";
 import { useQuran } from "./hooks/useQuran";
 import { getSurah, getAyahs, getEdition, getAyahByReference } from "./utils/api";
@@ -6,7 +6,7 @@ import { addAyahToFavorites, filterSurahs } from "./utils";
 import { BASE_QURAN_URL } from "./utils/constants";
 import { Surah, Ayah } from "./types";
 
-const SURAH_AYAH_REFERENCE_REGEX = /^(\d{1,3})\s*:\s*(\d{1,3})$/;
+const SURAH_AYAH_REFERENCE_REGEX = /^(\d{1,3})\s*[:/]\s*(\d{1,3})$/;
 
 export default function Command() {
   const [rawSearchText, setRawSearchText] = useState("");
@@ -129,13 +129,16 @@ export default function Command() {
     });
   }, [quickLookupLabel]);
 
+  const shouldShowQuickDetail = Boolean(quickLookupLabel && quickAyah);
+
   return (
     <List
       isLoading={isLoading}
       onSearchTextChange={setRawSearchText}
-      searchBarPlaceholder="Search by name/number or jump with 2:255"
+      searchBarPlaceholder="Search by name/number or jump with 2:255 or 2/255"
       selectedItemId={selectedItemId}
       onSelectionChange={(itemId) => setSelectedItemId(itemId)}
+      isShowingDetail={shouldShowQuickDetail}
     >
       {quickLookupLabel ? (
         <List.Section title={`Quick Lookup – ${quickLookupLabel}`}>
@@ -159,42 +162,44 @@ export default function Command() {
         </List.Section>
       ) : null}
 
-      {filteredSurahs?.map((surah) => (
-        <List.Item
-          id={`surah-${surah.number}`}
-          key={surah.number}
-          title={surah.englishName}
-          subtitle={surah.englishNameTranslation}
-          icon={{ source: "quran_logo.png" }}
-          accessories={[
-            {
-              text: surah.numberOfAyahs.toString(),
-              tooltip: "Number of Ayahs",
-              icon: { source: "quran.png" },
-            },
-            {
-              text: surah.revelationType,
-              tooltip: "Revelation Type",
-              icon: { source: `${surah.revelationType}.png` },
-            },
-          ]}
-          actions={
-            <ActionPanel>
-              <Action.Push target={<ReadSurah surah={surah} />} title="Read" />
-              <Action.OpenInBrowser
-                url={`${BASE_QURAN_URL}/${surah.number}`}
-                title="Read in Browser"
-                shortcut={Keyboard.Shortcut.Common.Open}
-              />
-              <Action.CopyToClipboard
-                title="Copy Link"
-                content={`${BASE_QURAN_URL}/${surah.number}`}
-                shortcut={Keyboard.Shortcut.Common.Copy}
-              />
-            </ActionPanel>
-          }
-        />
-      ))}
+      {!quickLookupLabel
+        ? filteredSurahs?.map((surah) => (
+            <List.Item
+              id={`surah-${surah.number}`}
+              key={surah.number}
+              title={surah.englishName}
+              subtitle={surah.englishNameTranslation}
+              icon={{ source: "quran_logo.png" }}
+              accessories={[
+                {
+                  text: surah.numberOfAyahs.toString(),
+                  tooltip: "Number of Ayahs",
+                  icon: { source: "quran.png" },
+                },
+                {
+                  text: surah.revelationType,
+                  tooltip: "Revelation Type",
+                  icon: { source: `${surah.revelationType}.png` },
+                },
+              ]}
+              actions={
+                <ActionPanel>
+                  <Action.Push target={<ReadSurah surah={surah} />} title="Read" />
+                  <Action.OpenInBrowser
+                    url={`${BASE_QURAN_URL}/${surah.number}`}
+                    title="Read in Browser"
+                    shortcut={Keyboard.Shortcut.Common.Open}
+                  />
+                  <Action.CopyToClipboard
+                    title="Copy Link"
+                    content={`${BASE_QURAN_URL}/${surah.number}`}
+                    shortcut={Keyboard.Shortcut.Common.Copy}
+                  />
+                </ActionPanel>
+              }
+            />
+          ))
+        : null}
     </List>
   );
 }
@@ -232,7 +237,12 @@ const AyahListItem = ({
   <List.Item
     title={title ?? `${ayah.numberInSurah}`}
     icon={{ source: "quran_logo.png" }}
-    detail={<List.Item.Detail markdown={buildAyahMarkdown(ayah)} />}
+    detail={
+      <List.Item.Detail
+        markdown={buildAyahMarkdown(ayah)}
+        metadata={<AyahDetailMetadata ayah={ayah} surah={surah} />}
+      />
+    }
     actions={
       <ActionPanel>
         <AyahActions ayah={ayah} surah={surah} />
@@ -249,39 +259,16 @@ const QuickLookupResult = ({ ayah }: { ayah: Ayah }) => {
       title={`${surah.englishName} ${surah.number}:${ayah.numberInSurah}`}
       subtitle={ayah.text}
       icon={{ source: Icon.MagnifyingGlass }}
-      detail={<List.Item.Detail markdown={buildAyahMarkdown(ayah)} />}
+      detail={
+        <List.Item.Detail
+          markdown={buildAyahMarkdown(ayah)}
+          metadata={<AyahDetailMetadata ayah={ayah} surah={surah} />}
+        />
+      }
       actions={
         <ActionPanel>
-          <Action.Push title="View Ayah Detail" icon={Icon.TextDocument} target={<QuickAyahDetail ayah={ayah} />} />
-          <ActionPanel.Section title="Ayah Tools">
-            <AyahActions ayah={ayah} surah={surah} />
-          </ActionPanel.Section>
+          <AyahActions ayah={ayah} surah={surah} />
         </ActionPanel>
-      }
-    />
-  );
-};
-
-const QuickAyahDetail = ({ ayah }: { ayah: Ayah }) => {
-  const surah = resolveSurahInfo(ayah);
-  const ayahUrl = `${BASE_QURAN_URL}/${surah.number}/${ayah.numberInSurah}`;
-
-  return (
-    <Detail
-      navigationTitle={`${surah.englishName} ${surah.number}:${ayah.numberInSurah}`}
-      markdown={buildAyahMarkdown(ayah)}
-      metadata={
-        <Detail.Metadata>
-          <Detail.Metadata.Label title="Surah" text={`${surah.englishName} (${surah.number})`} />
-          <Detail.Metadata.Label title="Ayah" text={`${ayah.numberInSurah}`} />
-          <Detail.Metadata.Label title="Juz" text={`${ayah.juz}`} />
-          <Detail.Metadata.Label title="Page" text={`${ayah.page}`} />
-          <Detail.Metadata.Label title="Hizb Quarter" text={`${ayah.hizbQuarter}`} />
-          <Detail.Metadata.Label title="Ruku" text={`${ayah.ruku}`} />
-          <Detail.Metadata.Label title="Manzil" text={`${ayah.manzil}`} />
-          <Detail.Metadata.Label title="Sajda" text={ayah.sajda ? "Yes" : "No"} />
-          <Detail.Metadata.Link title="Read in Browser" text="Open" target={ayahUrl} />
-        </Detail.Metadata>
       }
     />
   );
@@ -289,6 +276,25 @@ const QuickAyahDetail = ({ ayah }: { ayah: Ayah }) => {
 
 const buildAyahMarkdown = (ayah: Pick<Ayah, "text" | "arabicText">): string => {
   return `${ayah.arabicText ? `${ayah.arabicText}\n\n` : ""}${ayah.text}`;
+};
+
+const AyahDetailMetadata = ({ ayah, surah }: { ayah: Ayah; surah: Pick<Surah, "englishName" | "number"> }) => {
+  const resolvedSurah = resolveSurahInfo(ayah, surah);
+  const ayahUrl = `${BASE_QURAN_URL}/${resolvedSurah.number}/${ayah.numberInSurah}`;
+
+  return (
+    <List.Item.Detail.Metadata>
+      <List.Item.Detail.Metadata.Label title="Surah" text={`${resolvedSurah.englishName} (${resolvedSurah.number})`} />
+      <List.Item.Detail.Metadata.Label title="Ayah" text={`${ayah.numberInSurah}`} />
+      <List.Item.Detail.Metadata.Label title="Juz" text={`${ayah.juz}`} />
+      <List.Item.Detail.Metadata.Label title="Page" text={`${ayah.page}`} />
+      <List.Item.Detail.Metadata.Label title="Hizb Quarter" text={`${ayah.hizbQuarter}`} />
+      <List.Item.Detail.Metadata.Label title="Ruku" text={`${ayah.ruku}`} />
+      <List.Item.Detail.Metadata.Label title="Manzil" text={`${ayah.manzil}`} />
+      <List.Item.Detail.Metadata.Label title="Sajda" text={ayah.sajda ? "Yes" : "No"} />
+      <List.Item.Detail.Metadata.Link title="Read in Browser" text="Open" target={ayahUrl} />
+    </List.Item.Detail.Metadata>
+  );
 };
 
 const AyahActions = ({ ayah, surah }: { ayah: Ayah; surah: Pick<Surah, "englishName" | "number"> }) => {
@@ -333,10 +339,18 @@ const AyahActions = ({ ayah, surah }: { ayah: Ayah; surah: Pick<Surah, "englishN
 };
 
 const normalizeSearchInput = (value: string): string => {
-  if (!value.includes(":")) {
+  const delimiterIndex = Math.min(
+    ...[":", "/"].map((delimiter) => {
+      const idx = value.indexOf(delimiter);
+      return idx === -1 ? Number.POSITIVE_INFINITY : idx;
+    }),
+  );
+
+  if (!Number.isFinite(delimiterIndex)) {
     return value;
   }
-  return value.split(":")[0]?.trim() ?? "";
+
+  return value.slice(0, delimiterIndex).trim();
 };
 
 const resolveSurahInfo = (ayah: Ayah, fallback?: Surah): Pick<Surah, "englishName" | "number"> => {

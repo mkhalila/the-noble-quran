@@ -135,7 +135,7 @@ export default function Command() {
     <List
       isLoading={isLoading}
       onSearchTextChange={setRawSearchText}
-      searchBarPlaceholder="Search by name/number or jump with 2:255 or 2/255"
+      searchBarPlaceholder="Search by name/number or jump with 2:255"
       selectedItemId={selectedItemId}
       onSelectionChange={(itemId) => setSelectedItemId(itemId)}
       isShowingDetail={shouldShowQuickDetail}
